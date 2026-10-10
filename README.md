@@ -1,4 +1,9 @@
 # 🍱 FoodBridge — Food Donation Marketplace
+## 🌐 Live Demo
+
+**Try FoodBridge here:** [Launch FoodBridge](https://foodbridge-six-jet.vercel.app)
+
+Explore the cinematic landing page, donor dashboard, NGO food marketplace, and admin console.
 
 **Connecting surplus food with communities in need.**
 
