@@ -36,6 +36,7 @@ export default function DonorDashboard() {
   const currentUser = getCurrentUser() || {
     name: "Charminar Biryani House",
     role: "donor",
+    donorType: "business",
     area: "Charminar",
   };
   const { addToast } = useToast();
@@ -52,13 +53,20 @@ export default function DonorDashboard() {
     quantity: "",
     unit: "plates",
     area: currentUser.area || "Charminar",
-    pickupAddress: "Shop 14, Near Gulzar Houz, Charminar, Hyderabad",
+    pickupAddress: currentUser.address || `${currentUser.area || "Charminar"}, Hyderabad`,
     expiryHours: "3",
     description: "",
   });
 
   const loadDonations = () => {
     setDonations(getDonations());
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 17) return "Good afternoon";
+    return "Good evening";
   };
 
   const handleChange = (e) => {
@@ -74,8 +82,8 @@ export default function DonorDashboard() {
         category: "Biryani & Mughlai",
         quantity: "45",
         unit: "plates",
-        area: "Charminar",
-        pickupAddress: "Shop 14, Near Gulzar Houz, Charminar, Hyderabad",
+        area: currentUser.area || "Charminar",
+        pickupAddress: currentUser.address || "Shop 14, Near Gulzar Houz, Charminar, Hyderabad",
         expiryHours: "0.75", // 45 mins -> tests red countdown under 1 hr!
         description: "Freshly packed hot dum biryani with mirchi ka salan in sealed commercial foil containers.",
       },
@@ -84,9 +92,9 @@ export default function DonorDashboard() {
         category: "Cooked Meals",
         quantity: "60",
         unit: "meals",
-        area: "Jubilee Hills",
-        pickupAddress: "Road No. 36, Jubilee Hills, Hyderabad",
-        expiryHours: "3",
+        area: currentUser.area || "Jubilee Hills",
+        pickupAddress: currentUser.address || "Road No. 36, Jubilee Hills, Hyderabad",
+        expiryHours: "2.5",
         description: "Fresh banquet dinner meal packs, temperature held in thermal containers.",
       },
       {
@@ -94,24 +102,35 @@ export default function DonorDashboard() {
         category: "Bakery & Tea",
         quantity: "80",
         unit: "packets",
-        area: "Secunderabad",
-        pickupAddress: "Station Road, Near Clock Tower, Secunderabad",
+        area: currentUser.area || "Secunderabad",
+        pickupAddress: currentUser.address || "Station Road, Near Clock Tower, Secunderabad",
         expiryHours: "4",
         description: "Osmania butter biscuits and fresh chai flasks ready for distribution.",
+      },
+      {
+        foodName: "Steamed Idli & Sambar Packs",
+        category: "South Indian Tiffins",
+        quantity: "90",
+        unit: "plates",
+        area: currentUser.area || "Madhapur",
+        pickupAddress: currentUser.address || "Plot 82, Main Road, Madhapur, Hitech City",
+        expiryHours: "1.5",
+        description: "Steaming hot idlis packed with hot lentil sambar and coconut chutney.",
       },
     ];
     const picked = samples[Math.floor(Math.random() * samples.length)];
     setFormData(picked);
+    addToast("Loaded preset sample batch!", "info");
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.foodName.trim()) {
-      alert("Please enter a food item name.");
+      addToast("Please enter a food item or dish name.", "warning");
       return;
     }
     if (!formData.quantity || Number(formData.quantity) <= 0) {
-      alert("Please enter a valid quantity.");
+      addToast("Please enter a valid quantity.", "warning");
       return;
     }
 
@@ -133,7 +152,7 @@ export default function DonorDashboard() {
 
     loadDonations();
     setPostedSuccessId(newDonation.id);
-    addToast(`Successfully published ${formData.quantity} ${formData.unit} of "${formData.foodName}"!`, "success");
+    addToast(`Successfully listed ${formData.quantity} ${formData.unit} of "${formData.foodName}"!`, "success");
 
     // Reset form fields
     setFormData({
@@ -165,83 +184,106 @@ export default function DonorDashboard() {
     myTotalDonations.filter((d) => d.claimedByName).map((d) => d.claimedByName)
   ).size;
 
+  const isIndividual = currentUser.donorType === "individual";
+
   return (
     <div className="portal-root">
       <Navbar />
 
       <main className="portal-content">
+        {/* Warm Visual Editorial Header */}
         <div className="portal-header">
-          <div>
-            <div className="portal-breadcrumb">Kitchen Surplus Dispatch</div>
-            <h1 className="portal-title">{currentUser.name}</h1>
+          <div className="header-text-block">
+            <div className="portal-breadcrumb">
+              Food Rescue Marketplace / Donor Portal
+            </div>
+            <div className="header-title-row">
+              <h1 className="portal-title">
+                {getGreeting()}, {currentUser.name}
+              </h1>
+              <span className={`donor-profile-badge ${isIndividual ? "badge-ind" : "badge-biz"}`}>
+                {isIndividual ? "👤 Community Donor" : "🏢 Commercial Kitchen"}
+              </span>
+            </div>
             <p className="portal-subtitle">
-              Dispatch commercial surplus food to accredited shelters across Hyderabad in minutes.
+              Dispatch surplus meals to accredited shelters across Hyderabad in under 60 seconds.
             </p>
+          </div>
+          <div className="header-meta-pill">
+            <span className="live-dot" />
+            <span>Zone: <strong>{currentUser.area || "Hyderabad"}</strong></span>
           </div>
         </div>
 
-        {/* My Impact Strip with Count-Up Animation */}
-        <motion.div
-          className="impact-strip"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-        >
-          <div className="impact-item">
-            <span className="impact-icon">🍲</span>
-            <div className="impact-data">
-              <span className="impact-val">
+        {/* 3 Refined Impact Metric Glass Cards */}
+        <div className="impact-cards-grid">
+          <motion.div
+            className="impact-glass-card"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.05 }}
+          >
+            <div className="card-icon-wrap icon-orange">🍲</div>
+            <div className="card-stat-wrap">
+              <span className="stat-metric">
                 <CountUp end={myMealsShared} />
               </span>
-              <span className="impact-label">Meals Shared</span>
+              <span className="stat-label">Meals Shared in Hyderabad</span>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="impact-divider" />
-
-          <div className="impact-item">
-            <span className="impact-icon">⚖️</span>
-            <div className="impact-data">
-              <span className="impact-val">
+          <motion.div
+            className="impact-glass-card"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <div className="card-icon-wrap icon-amber">⚖️</div>
+            <div className="card-stat-wrap">
+              <span className="stat-metric">
                 <CountUp end={myKgSaved} suffix=" kg" />
               </span>
-              <span className="impact-label">Food Waste Prevented</span>
+              <span className="stat-label">Food Waste Prevented</span>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="impact-divider" />
-
-          <div className="impact-item">
-            <span className="impact-icon">🤝</span>
-            <div className="impact-data">
-              <span className="impact-val">
+          <motion.div
+            className="impact-glass-card"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+          >
+            <div className="card-icon-wrap icon-emerald">🤝</div>
+            <div className="card-stat-wrap">
+              <span className="stat-metric">
                 <CountUp end={distinctNgosHelped || 2} />
               </span>
-              <span className="impact-label">NGO Shelters Supported</span>
+              <span className="stat-label">NGO Shelters Supported</span>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
 
-        {/* Two-Column Grid: Form + Donations List */}
+        {/* Two-Column Layout: Compact Post Food Form + Active Listings */}
         <div className="donor-grid-layout">
-          {/* Post Food Form */}
-          <div className="form-card">
-            <div className="form-card-header">
+          {/* Form Card: Frosted Glass Panel */}
+          <div className="donor-form-panel">
+            <div className="panel-header-row">
               <div>
                 <h2>Post Surplus Food</h2>
-                <p>Submit batch details for immediate rescue dispatch.</p>
+                <p>Enter batch details for immediate shelter dispatch.</p>
               </div>
               <button
                 type="button"
                 onClick={handleQuickFill}
-                className="subtle-quickfill-link"
+                className="btn-quickfill"
+                title="Populate realistic demo surplus food"
               >
                 ⚡ Quick fill
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="donation-form">
-              <div className="form-group">
+            <form onSubmit={handleSubmit} className="donation-form-body">
+              <div className="form-group mb-3">
                 <label htmlFor="foodName">Food Item / Dish *</label>
                 <input
                   id="foodName"
@@ -255,7 +297,7 @@ export default function DonorDashboard() {
                 />
               </div>
 
-              <div className="form-row-2">
+              <div className="form-row-2 mb-3">
                 <div className="form-group">
                   <label htmlFor="category">Category *</label>
                   <select
@@ -291,9 +333,9 @@ export default function DonorDashboard() {
                 </div>
               </div>
 
-              {/* Fix 8: Quantity & Unit row with min-width: 0 so it never clips */}
-              <div className="form-row-qty-fixed">
-                <div className="form-group" style={{ minWidth: 0 }}>
+              {/* Quantity & Unit Row */}
+              <div className="form-row-2 mb-3">
+                <div className="form-group">
                   <label htmlFor="quantity">Quantity *</label>
                   <input
                     id="quantity"
@@ -305,11 +347,10 @@ export default function DonorDashboard() {
                     value={formData.quantity}
                     onChange={handleChange}
                     className="input-field"
-                    style={{ minWidth: 0, width: "100%" }}
                   />
                 </div>
 
-                <div className="form-group" style={{ minWidth: 0 }}>
+                <div className="form-group">
                   <label htmlFor="unit">Unit *</label>
                   <select
                     id="unit"
@@ -317,7 +358,6 @@ export default function DonorDashboard() {
                     value={formData.unit}
                     onChange={handleChange}
                     className="select-field"
-                    style={{ minWidth: 0, width: "100%" }}
                   >
                     {UNITS.map((u) => (
                       <option key={u} value={u}>
@@ -328,22 +368,22 @@ export default function DonorDashboard() {
                 </div>
               </div>
 
-              <div className="form-group">
+              <div className="form-group mb-3">
                 <label htmlFor="pickupAddress">Pickup Address in {formData.area} *</label>
                 <input
                   id="pickupAddress"
                   name="pickupAddress"
                   type="text"
                   required
-                  placeholder="Street address, landmark"
+                  placeholder="Street address, building, landmark"
                   value={formData.pickupAddress}
                   onChange={handleChange}
                   className="input-field"
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="expiryHours">Expiry Window (Hours) *</label>
+              <div className="form-group mb-3">
+                <label htmlFor="expiryHours">Safe Expiry Window *</label>
                 <select
                   id="expiryHours"
                   name="expiryHours"
@@ -359,13 +399,13 @@ export default function DonorDashboard() {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="description">Handling Instructions & Packaging</label>
+              <div className="form-group mb-4">
+                <label htmlFor="description">Packaging & Handling Notes</label>
                 <textarea
                   id="description"
                   name="description"
                   rows="3"
-                  placeholder="Sealed foil packs, spicy/mild, dietary restrictions, temperature requirements..."
+                  placeholder="Sealed foil packs, mild spice level, temperature held..."
                   value={formData.description}
                   onChange={handleChange}
                   className="textarea-field"
@@ -383,131 +423,136 @@ export default function DonorDashboard() {
             </form>
           </div>
 
-          {/* Donations List */}
-          <div className="list-card">
-            <div className="list-card-header">
+          {/* Active Listings Column */}
+          <div className="donor-listings-panel">
+            <div className="panel-header-row">
               <div>
-                <h2>Active Listings</h2>
-                <p>Real-time lifecycle tracking of dispatched batches.</p>
+                <h2>Dispatch Listings</h2>
+                <p>Lifecycle tracking for posted surplus batches.</p>
               </div>
 
-              <div className="filter-controls">
-                <div className="segmented-control">
-                  <button
-                    type="button"
-                    className={`segment-btn ${filterView === "my" ? "active" : ""}`}
-                    onClick={() => setFilterView("my")}
-                  >
-                    My Listings ({myTotalDonations.length})
-                  </button>
-                  <button
-                    type="button"
-                    className={`segment-btn ${filterView === "all" ? "active" : ""}`}
-                    onClick={() => setFilterView("all")}
-                  >
-                    All ({donations.length})
-                  </button>
-                </div>
-
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="select-field select-sm"
+              <div className="segmented-control">
+                <button
+                  type="button"
+                  className={`segment-btn ${filterView === "my" ? "active" : ""}`}
+                  onClick={() => setFilterView("my")}
                 >
-                  <option value="all">All Statuses</option>
-                  <option value="available">Available</option>
-                  <option value="claimed">Claimed</option>
-                  <option value="picked_up">Picked Up</option>
-                  <option value="delivered">Delivered</option>
-                </select>
+                  My Listings ({myTotalDonations.length})
+                </button>
+                <button
+                  type="button"
+                  className={`segment-btn ${filterView === "all" ? "active" : ""}`}
+                  onClick={() => setFilterView("all")}
+                >
+                  All Hyderabad ({donations.length})
+                </button>
               </div>
             </div>
 
-            <div className="donations-feed">
-              <AnimatePresence>
-                {displayedDonations.length === 0 ? (
-                  <motion.div
-                    className="empty-state"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+            {/* Filter by Status Pills */}
+            <div className="status-filter-pills-row">
+              {[
+                { id: "all", label: "All Statuses" },
+                { id: "available", label: "Available" },
+                { id: "claimed", label: "Claimed" },
+                { id: "picked_up", label: "In Transit" },
+                { id: "delivered", label: "Delivered" },
+              ].map((pill) => (
+                <button
+                  key={pill.id}
+                  type="button"
+                  className={`status-chip-btn ${statusFilter === pill.id ? "active" : ""}`}
+                  onClick={() => setStatusFilter(pill.id)}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+
+            {/* List Cards Feed */}
+            <div className="donor-cards-feed">
+              {displayedDonations.length === 0 ? (
+                <div className="donor-empty-state">
+                  <span className="empty-icon">📦</span>
+                  <h3>No donation listings found</h3>
+                  <p>
+                    {filterView === "my"
+                      ? "You haven't posted any surplus batches matching this filter yet."
+                      : "No listings in Hyderabad currently match the selected status."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleQuickFill}
+                    className="btn-secondary-sm mt-3"
                   >
-                    <span className="empty-icon">🍲</span>
-                    <h3>No listings found</h3>
-                    <p>Post a food batch using the form on the left to start rescuing meals.</p>
-                  </motion.div>
-                ) : (
-                  displayedDonations.map((item) => (
+                    ⚡ Populate with Sample Batch
+                  </button>
+                </div>
+              ) : (
+                displayedDonations.map((item) => {
+                  const foodImg = getFoodImage(item.foodName, item.category);
+                  const isRecentlyPosted = postedSuccessId === item.id;
+
+                  return (
                     <motion.div
                       key={item.id}
-                      layout
-                      initial={{ opacity: 0, y: -16, scale: 0.98 }}
-                      animate={{
-                        opacity: 1,
-                        y: 0,
-                        scale: 1,
-                        borderColor: postedSuccessId === item.id ? "rgba(249, 115, 22, 0.9)" : "var(--border-subtle)",
-                      }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.3 }}
-                      className={`donation-item-card ${postedSuccessId === item.id ? "card-highlight-new" : ""}`}
+                      className={`donor-listing-card ${isRecentlyPosted ? "card-highlight-glow" : ""}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.25 }}
                     >
-                      <div className="donor-card-top-flex">
-                        <img
-                          src={item.imageUrl || getFoodImage(item.foodName, item.category)}
-                          alt={item.foodName}
-                          className="donor-card-thumb"
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = "/images/biryani.jpg";
-                          }}
-                        />
-                        <div className="donation-item-main">
-                          <div className="tag-row-meta">
-                            <span className="item-category-tag">{item.category}</span>
-                            <span className="area-pill-tag">📍 {item.area || "Hyderabad"}</span>
-                          </div>
-                          <h3 className="donation-title">{item.foodName}</h3>
-                          <div className="donation-meta-inline">
-                            <span className="meta-donor">{item.donorName}</span>
-                            <span className="meta-separator">•</span>
-                            <span className="meta-qty">
-                              <strong>{item.quantity}</strong> {item.unit}
-                            </span>
-                          </div>
-                        </div>
-
-                        <CountdownBadge
-                          targetTimestamp={item.expiryTimestamp}
-                          fallbackText={item.expiryTime}
-                        />
-                      </div>
-
-                      {item.description && (
-                        <p className="donation-desc">{item.description}</p>
-                      )}
-
-                      <div className="donation-item-details">
-                        <div className="detail-row">
-                          <span className="detail-icon">🏢</span>
-                          <span className="detail-text">{item.pickupAddress}</span>
-                        </div>
-                      </div>
-
-                      {/* Status Timeline Component */}
-                      <StatusTimeline status={item.status} />
-
-                      {item.claimedByName && (
-                        <div className="claimed-by-footer">
-                          <span className="claim-icon">🤝</span>
-                          <span>
-                            Relief partner: <strong>{item.claimedByName}</strong>
+                      <div className="listing-card-main">
+                        <div className="listing-thumb-wrap">
+                          <img
+                            src={foodImg}
+                            alt={item.foodName}
+                            loading="lazy"
+                            className="listing-thumb"
+                          />
+                          <span className={`status-overlay-tag status-${item.status}`}>
+                            {item.status.replace("_", " ")}
                           </span>
                         </div>
-                      )}
+
+                        <div className="listing-content">
+                          <div className="listing-top-meta">
+                            <span className="food-category-tag">{item.category}</span>
+                            <CountdownBadge
+                              expiryTimestamp={item.expiryTimestamp}
+                              expiryTime={item.expiryTime}
+                            />
+                          </div>
+
+                          <h3 className="listing-title">{item.foodName}</h3>
+
+                          <div className="listing-sub-meta">
+                            <span className="qty-tag">
+                              📦 {item.quantity} {item.unit}
+                            </span>
+                            <span className="location-tag">
+                              📍 {item.area}
+                            </span>
+                            {item.claimedByName && (
+                              <span className="claimant-tag">
+                                🤝 Claimed by <strong>{item.claimedByName}</strong>
+                              </span>
+                            )}
+                          </div>
+
+                          {item.description && (
+                            <p className="listing-desc">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status Lifecycle Progress Bar */}
+                      <div className="listing-timeline-strip">
+                        <StatusTimeline status={item.status} />
+                      </div>
                     </motion.div>
-                  ))
-                )}
-              </AnimatePresence>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

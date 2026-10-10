@@ -1,19 +1,78 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { setCurrentUser, HYDERABAD_DONORS, HYDERABAD_NGOS } from "../lib/store";
+import {
+  setCurrentUser,
+  HYDERABAD_DONORS,
+  HYDERABAD_INDIVIDUAL_DONORS,
+  HYDERABAD_NGOS,
+} from "../lib/store";
 import Logo from "../components/Logo";
+
+const HYDERABAD_AREAS = [
+  "Charminar",
+  "Secunderabad",
+  "Jubilee Hills",
+  "Madhapur",
+  "Banjara Hills",
+  "Gachibowli",
+  "Kukatpally",
+  "Begumpet",
+  "Ameerpet",
+  "Hitech City",
+];
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("donor"); // 'donor', 'ngo', 'admin'
-  const [selectedDonorId, setSelectedDonorId] = useState("donor-1");
+
+  // Primary Role: 'donor' | 'ngo' | 'admin'
+  const [activeTab, setActiveTab] = useState("donor");
+
+  // Donor Sub-Type: 'business' | 'individual'
+  const [donorType, setDonorType] = useState("business");
+
+  // Business Donor state
+  const [selectedBusinessId, setSelectedBusinessId] = useState("donor-1");
+
+  // Individual Donor state
+  const [selectedIndividualId, setSelectedIndividualId] = useState("ind-1");
+  const [individualName, setIndividualName] = useState("Priya Sharma");
+  const [individualEmail, setIndividualEmail] = useState("priya.sharma@gmail.com");
+  const [individualArea, setIndividualArea] = useState("Banjara Hills");
+
+  // NGO State
   const [selectedNgoId, setSelectedNgoId] = useState("ngo-1");
-  const [password, setPassword] = useState("••••••••••••");
+
+  // Admin State
+  const [adminName, setAdminName] = useState("Operations Administrator");
+  const [adminEmail, setAdminEmail] = useState("admin@foodbridge.org");
+
+  // Demo password
+  const [demoPasscode, setDemoPasscode] = useState("••••••••••••");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const activeDonor = HYDERABAD_DONORS.find((d) => d.id === selectedDonorId) || HYDERABAD_DONORS[0];
-  const activeNgo = HYDERABAD_NGOS.find((n) => n.id === selectedNgoId) || HYDERABAD_NGOS[0];
+  // Active objects
+  const activeBusiness =
+    HYDERABAD_DONORS.find((d) => d.id === selectedBusinessId) || HYDERABAD_DONORS[0];
+  const activeNgo =
+    HYDERABAD_NGOS.find((n) => n.id === selectedNgoId) || HYDERABAD_NGOS[0];
+
+  // When picking a seeded individual
+  const handleSelectIndividual = (id) => {
+    setSelectedIndividualId(id);
+    if (id === "custom") {
+      setIndividualName("");
+      setIndividualEmail("");
+      setIndividualArea("Banjara Hills");
+    } else {
+      const match = HYDERABAD_INDIVIDUAL_DONORS.find((ind) => ind.id === id);
+      if (match) {
+        setIndividualName(match.name);
+        setIndividualEmail(match.email);
+        setIndividualArea(match.area);
+      }
+    }
+  };
 
   const handleSignIn = (e) => {
     e.preventDefault();
@@ -21,12 +80,25 @@ export default function LoginPage() {
 
     setTimeout(() => {
       if (activeTab === "donor") {
-        setCurrentUser({
-          role: "donor",
-          name: activeDonor.name,
-          email: activeDonor.email,
-          area: activeDonor.area,
-        });
+        if (donorType === "business") {
+          setCurrentUser({
+            role: "donor",
+            donorType: "business",
+            name: activeBusiness.name,
+            email: activeBusiness.email,
+            area: activeBusiness.area,
+            address: activeBusiness.address,
+          });
+        } else {
+          setCurrentUser({
+            role: "donor",
+            donorType: "individual",
+            name: individualName.trim() || "Community Donor",
+            email: individualEmail.trim() || "donor@community.org",
+            area: individualArea,
+            address: `${individualArea}, Hyderabad`,
+          });
+        }
         navigate("/donor");
       } else if (activeTab === "ngo") {
         setCurrentUser({
@@ -34,29 +106,24 @@ export default function LoginPage() {
           name: activeNgo.name,
           email: activeNgo.contact,
           area: activeNgo.area,
-          verified: activeNgo.verified,
+          verified: Boolean(activeNgo.verified),
         });
         navigate("/ngo");
       } else if (activeTab === "admin") {
         setCurrentUser({
           role: "admin",
-          name: "Operations Administrator",
-          email: "admin@foodbridge.org",
+          name: adminName.trim() || "Operations Administrator",
+          email: adminEmail.trim() || "admin@foodbridge.org",
         });
         navigate("/admin");
       }
-    }, 400);
-  };
-
-  const getEmailForTab = () => {
-    if (activeTab === "donor") return activeDonor.email;
-    if (activeTab === "ngo") return activeNgo.contact;
-    return "admin@foodbridge.org";
+      setIsSubmitting(false);
+    }, 250);
   };
 
   return (
     <div className="signin-split-container">
-      {/* Left visual column with authentic food photograph background */}
+      {/* Left Column: Authentic Food Photography Hero */}
       <div className="signin-left-col">
         <div
           className="signin-bg-image"
@@ -70,104 +137,227 @@ export default function LoginPage() {
           </Link>
 
           <div className="signin-hero-statement">
-            <h1>Connecting surplus kitchens with local hunger relief across Hyderabad.</h1>
+            <span className="editorial-pill">Hyderabad Food Rescue Network</span>
+            <h1>Connecting surplus food with local hunger relief in real time.</h1>
             <p>
-              From Charminar to Hitech City, commercial kitchens redirect surplus meals to accredited shelters in under 60 seconds.
+              From Charminar to Hitech City, commercial kitchens and community donors redirect surplus meals to accredited shelters in under 60 seconds.
             </p>
           </div>
 
           <div className="signin-stats-pills">
             <div className="pill-item">
               <span className="pill-val">1,150+</span>
-              <span className="pill-lbl">Meals Recovered</span>
+              <span className="pill-lbl">Meals Rescued</span>
             </div>
             <div className="pill-divider" />
             <div className="pill-item">
               <span className="pill-val">6 Zones</span>
-              <span className="pill-lbl">Active Coverage</span>
+              <span className="pill-lbl">Hyderabad Coverage</span>
             </div>
             <div className="pill-divider" />
             <div className="pill-item">
-              <span className="pill-val">100%</span>
-              <span className="pill-lbl">GPS Verified</span>
+              <span className="pill-val">4 NGOs</span>
+              <span className="pill-lbl">Registered Partners</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right column: glass sign-in card */}
+      {/* Right Column: Liquid-Glass Account Selection Card */}
       <div className="signin-right-col">
         <motion.div
           className="signin-glass-card"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.35 }}
         >
           <div className="card-top-header">
-            <h2>Welcome back</h2>
-            <p>Sign in to your organization's FoodBridge account</p>
+            <div className="header-badge-row">
+              <span className="live-demo-tag">⚡ Interactive Demo</span>
+            </div>
+            <h2>Account Access</h2>
+            <p>Select your portal role to explore the food-rescue marketplace</p>
           </div>
 
-          {/* Three Role Tabs */}
-          <div className="role-tab-switch">
+          {/* Three Primary Roles Segmented Control */}
+          <div className="role-tab-switch" role="tablist">
             {[
               { id: "donor", label: "Donor", icon: "🥖" },
-              { id: "ngo", label: "NGO", icon: "🤝" },
-              { id: "admin", label: "Admin", icon: "🛡️" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                className={`tab-btn-pill ${activeTab === tab.id ? "active" : ""}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {activeTab === tab.id && (
-                  <motion.div
-                    className="tab-pill-highlight"
-                    layoutId="activeRoleTab"
-                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                  />
-                )}
-                <span className="tab-btn-label">
-                  <span className="tab-icon">{tab.icon}</span>
-                  {tab.label}
-                </span>
-              </button>
-            ))}
+              { id: "ngo", label: "NGO Partner", icon: "🤝" },
+              { id: "admin", label: "Operations Admin", icon: "🛡️" },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`tab-btn-pill ${isActive ? "active" : ""}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <span className="tab-btn-label">
+                    <span className="tab-icon">{tab.icon}</span>
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* Animated Tab Content Form */}
+          {/* Interactive Form Formats */}
           <form onSubmit={handleSignIn} className="signin-form">
             <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className="tab-fields-wrap"
-              >
-                {activeTab === "donor" && (
-                  <div className="form-group mb-3">
-                    <label htmlFor="donorSelect">Organization Account</label>
-                    <select
-                      id="donorSelect"
-                      className="input-select"
-                      value={selectedDonorId}
-                      onChange={(e) => setSelectedDonorId(e.target.value)}
+              {/* DONOR TAB */}
+              {activeTab === "donor" && (
+                <motion.div
+                  key="tab-donor"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="tab-fields-wrap"
+                >
+                  {/* Individual vs Business Switch */}
+                  <div className="donor-type-segmented">
+                    <button
+                      type="button"
+                      className={`donor-type-btn ${donorType === "business" ? "active" : ""}`}
+                      onClick={() => setDonorType("business")}
                     >
-                      {HYDERABAD_DONORS.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name} ({d.area})
-                        </option>
-                      ))}
-                    </select>
+                      <span className="type-icon">🏢</span>
+                      <div className="type-text">
+                        <strong>Commercial Kitchen</strong>
+                        <small>Restaurants, Banquets, Canteens</small>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`donor-type-btn ${donorType === "individual" ? "active" : ""}`}
+                      onClick={() => setDonorType("individual")}
+                    >
+                      <span className="type-icon">👤</span>
+                      <div className="type-text">
+                        <strong>Individual Donor</strong>
+                        <small>Home cooks & Event hosts</small>
+                      </div>
+                    </button>
                   </div>
-                )}
 
-                {activeTab === "ngo" && (
+                  {donorType === "business" ? (
+                    <>
+                      <div className="form-group mb-3">
+                        <label htmlFor="businessSelect">Seeded Commercial Donor</label>
+                        <select
+                          id="businessSelect"
+                          className="input-select"
+                          value={selectedBusinessId}
+                          onChange={(e) => setSelectedBusinessId(e.target.value)}
+                        >
+                          {HYDERABAD_DONORS.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} · {d.category} ({d.area})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="form-group mb-3">
+                        <label htmlFor="businessEmail">Contact Email</label>
+                        <input
+                          id="businessEmail"
+                          type="email"
+                          readOnly
+                          value={activeBusiness.email}
+                          className="input-text readonly"
+                        />
+                      </div>
+
+                      <div className="form-group mb-3">
+                        <label>Pickup Location</label>
+                        <div className="info-chip-static">
+                          📍 {activeBusiness.address}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="form-group mb-3">
+                        <label htmlFor="individualPreset">Profile Preset or Custom</label>
+                        <select
+                          id="individualPreset"
+                          className="input-select"
+                          value={selectedIndividualId}
+                          onChange={(e) => handleSelectIndividual(e.target.value)}
+                        >
+                          {HYDERABAD_INDIVIDUAL_DONORS.map((ind) => (
+                            <option key={ind.id} value={ind.id}>
+                              {ind.name} · {ind.bio} ({ind.area})
+                            </option>
+                          ))}
+                          <option value="custom">+ Create Custom Individual Profile</option>
+                        </select>
+                      </div>
+
+                      <div className="form-row-2 mb-3">
+                        <div className="form-group">
+                          <label htmlFor="indName">Your Name</label>
+                          <input
+                            id="indName"
+                            type="text"
+                            required
+                            placeholder="e.g. Priya Sharma"
+                            value={individualName}
+                            onChange={(e) => setIndividualName(e.target.value)}
+                            className="input-text"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label htmlFor="indArea">Hyderabad Zone</label>
+                          <select
+                            id="indArea"
+                            className="input-select"
+                            value={individualArea}
+                            onChange={(e) => setIndividualArea(e.target.value)}
+                          >
+                            {HYDERABAD_AREAS.map((a) => (
+                              <option key={a} value={a}>
+                                {a}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="form-group mb-3">
+                        <label htmlFor="indEmail">Email Address</label>
+                        <input
+                          id="indEmail"
+                          type="email"
+                          required
+                          placeholder="name@example.com"
+                          value={individualEmail}
+                          onChange={(e) => setIndividualEmail(e.target.value)}
+                          className="input-text"
+                        />
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              )}
+
+              {/* NGO TAB */}
+              {activeTab === "ngo" && (
+                <motion.div
+                  key="tab-ngo"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="tab-fields-wrap"
+                >
                   <div className="form-group mb-3">
-                    <label htmlFor="ngoSelect">Relief Organization</label>
+                    <label htmlFor="ngoSelect">Registered Relief Organization</label>
                     <select
                       id="ngoSelect"
                       className="input-select"
@@ -176,51 +366,103 @@ export default function LoginPage() {
                     >
                       {HYDERABAD_NGOS.map((n) => (
                         <option key={n.id} value={n.id}>
-                          {n.name} {n.verified ? "(Verified)" : "(Pending Verification)"}
+                          {n.name} — {n.verified ? "✓ Verified" : "⚠️ Pending Accreditation"} ({n.area})
                         </option>
                       ))}
                     </select>
                   </div>
-                )}
 
-                {activeTab === "admin" && (
+                  <div className="ngo-detail-preview mb-3">
+                    <div className="preview-row">
+                      <span className="preview-label">Area Focus</span>
+                      <span className="preview-val">📍 {activeNgo.area}, Hyderabad</span>
+                    </div>
+                    <div className="preview-row">
+                      <span className="preview-label">Accreditation</span>
+                      <span className={`status-pill ${activeNgo.verified ? "status-delivered" : "status-claimed"}`}>
+                        {activeNgo.verified ? "Accredited for Instant Claims" : "Pending Verification"}
+                      </span>
+                    </div>
+                    <p className="ngo-desc-sub">{activeNgo.description}</p>
+                  </div>
+
                   <div className="form-group mb-3">
-                    <label>Role</label>
-                    <div className="input-static">
-                      Operations & Dispatch Administrator
+                    <label htmlFor="ngoContact">Contact Representative Email</label>
+                    <input
+                      id="ngoContact"
+                      type="email"
+                      readOnly
+                      value={activeNgo.contact}
+                      className="input-text readonly"
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {/* ADMIN TAB */}
+              {activeTab === "admin" && (
+                <motion.div
+                  key="tab-admin"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="tab-fields-wrap"
+                >
+                  <div className="admin-access-callout mb-3">
+                    <div className="callout-icon">🛡️</div>
+                    <div className="callout-body">
+                      <strong>Platform Operations & Dispatch Console</strong>
+                      <p>
+                        Inspect city-wide meal recovery telemetry, manage active dispatch flows, and accredit grassroots charity partners.
+                      </p>
                     </div>
                   </div>
-                )}
 
-                <div className="form-group mb-3">
-                  <label htmlFor="signinEmail">Work Email</label>
-                  <input
-                    id="signinEmail"
-                    type="email"
-                    required
-                    readOnly
-                    value={getEmailForTab()}
-                    className="input-text readonly"
-                  />
-                </div>
-
-                <div className="form-group mb-4">
-                  <div className="label-row">
-                    <label htmlFor="signinPassword">Password</label>
-                    <span className="forgot-text">Reset key</span>
+                  <div className="form-group mb-3">
+                    <label htmlFor="adminName">Administrator Identity</label>
+                    <input
+                      id="adminName"
+                      type="text"
+                      required
+                      value={adminName}
+                      onChange={(e) => setAdminName(e.target.value)}
+                      className="input-text"
+                    />
                   </div>
-                  <input
-                    id="signinPassword"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="input-text"
-                  />
-                </div>
-              </motion.div>
+
+                  <div className="form-group mb-3">
+                    <label htmlFor="adminEmail">Official Email</label>
+                    <input
+                      id="adminEmail"
+                      type="email"
+                      required
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      className="input-text"
+                    />
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
+            {/* Passcode field (clear simulated label) */}
+            <div className="form-group mb-4">
+              <div className="label-row">
+                <label htmlFor="demoPass">Demo Security Passcode</label>
+                <span className="forgot-text">Any passcode accepted</span>
+              </div>
+              <input
+                id="demoPass"
+                type="password"
+                value={demoPasscode}
+                onChange={(e) => setDemoPasscode(e.target.value)}
+                className="input-text"
+                autoComplete="current-password"
+              />
+            </div>
+
+            {/* Submit Action */}
             <motion.button
               type="submit"
               className="btn-signin-submit"
@@ -230,16 +472,25 @@ export default function LoginPage() {
             >
               {isSubmitting ? (
                 <span className="btn-loading-text">
-                  <span className="spinner-dot" /> Authenticating...
+                  <span className="spinner-dot" /> Initializing Session...
                 </span>
+              ) : activeTab === "donor" ? (
+                donorType === "business" ? (
+                  `Enter as ${activeBusiness.name} →`
+                ) : (
+                  `Enter as Individual Donor (${individualName || "Community"}) →`
+                )
+              ) : activeTab === "ngo" ? (
+                `Enter as ${activeNgo.name} →`
               ) : (
-                `Sign in as ${activeTab === "donor" ? "Donor" : activeTab === "ngo" ? "NGO Partner" : "Admin"} →`
+                "Enter Operations Command Center →"
               )}
             </motion.button>
           </form>
 
           <div className="card-footer-note">
-            <span>Security protected by FoodBridge Identity Services</span>
+            <span className="footer-lock-icon">🔒</span>
+            <span>Simulated session is stored in your local browser storage for hackathon testing.</span>
           </div>
         </motion.div>
       </div>

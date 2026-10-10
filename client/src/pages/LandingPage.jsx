@@ -13,7 +13,15 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="landing-page-root" style={{ background: "#000", minHeight: "100vh", position: "relative" }}>
+    <div
+      className="landing-page-root"
+      style={{
+        background: "#000",
+        minHeight: "100vh",
+        position: "relative",
+        overflowX: "clip",
+      }}
+    >
       {/* ScrollHero component keeping the exact scroll experience */}
       <ScrollHero onEnter={handleEnter} />
 

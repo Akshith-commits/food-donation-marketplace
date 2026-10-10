@@ -74,6 +74,36 @@ export const HYDERABAD_DONORS = [
   },
 ];
 
+export const HYDERABAD_INDIVIDUAL_DONORS = [
+  {
+    id: "ind-1",
+    name: "Priya Sharma",
+    type: "individual",
+    area: "Banjara Hills",
+    address: "Road No. 10, Banjara Hills, Hyderabad",
+    email: "priya.sharma@gmail.com",
+    bio: "Home cook & community gathering host",
+  },
+  {
+    id: "ind-2",
+    name: "Arjun Reddy",
+    type: "individual",
+    area: "Gachibowli",
+    address: "My Home Bhooja, Block B, Hitech City, Hyderabad",
+    email: "arjun.reddy@techhub.in",
+    bio: "Weekend event organizer & food rescue champion",
+  },
+  {
+    id: "ind-3",
+    name: "Ananya Rao",
+    type: "individual",
+    area: "Jubilee Hills",
+    address: "Journalist Colony, Jubilee Hills, Hyderabad",
+    email: "ananya.rao@outlook.com",
+    bio: "Family celebration & festive surplus donor",
+  },
+];
+
 export const HYDERABAD_NGOS = [
   {
     id: "ngo-1",

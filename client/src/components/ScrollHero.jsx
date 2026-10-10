@@ -85,9 +85,6 @@ export default function ScrollHero({ onEnter }) {
       currentRef.current = i;
       requestAnimationFrame(() => draw(i));
     }
-    if (p >= 0.99 && onEnter) {
-      onEnter();
-    }
   });
 
   return (
