@@ -1,12 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  getCurrentUser,
-  setCurrentUser,
-  logout,
-  HYDERABAD_DONORS,
-  HYDERABAD_NGOS,
-} from "../lib/store";
+import { getCurrentUser, logout } from "../lib/store";
 import Logo from "../components/Logo";
 
 export default function Navbar() {
@@ -26,48 +20,14 @@ export default function Navbar() {
   }, []);
 
   const handleSignOut = () => {
+    setMenuOpen(false);
     logout();
     navigate("/");
   };
 
   const handleSwitchAccount = () => {
-    navigate("/login");
-  };
-
-  const handleQuickJumpRole = (role) => {
     setMenuOpen(false);
-    if (role === "donor") {
-      if (user?.role !== "donor") {
-        setCurrentUser({
-          role: "donor",
-          donorType: "business",
-          name: HYDERABAD_DONORS[0].name,
-          email: HYDERABAD_DONORS[0].email,
-          area: HYDERABAD_DONORS[0].area,
-        });
-      }
-      navigate("/donor");
-    } else if (role === "ngo") {
-      if (user?.role !== "ngo") {
-        setCurrentUser({
-          role: "ngo",
-          name: HYDERABAD_NGOS[0].name,
-          email: HYDERABAD_NGOS[0].contact,
-          area: HYDERABAD_NGOS[0].area,
-          verified: true,
-        });
-      }
-      navigate("/ngo");
-    } else if (role === "admin") {
-      if (user?.role !== "admin") {
-        setCurrentUser({
-          role: "admin",
-          name: "Operations Administrator",
-          email: "admin@foodbridge.org",
-        });
-      }
-      navigate("/admin");
-    }
+    navigate("/login");
   };
 
   const getRoleBadge = (role) => {
@@ -92,35 +52,46 @@ export default function Navbar() {
           <Link to="/" className="navbar-brand-link">
             <Logo size="md" />
           </Link>
-          <span className="navbar-city-pill">
-            <span className="live-dot" /> Hyderabad
+          <span className="navbar-city-pill" title="Active Hub: Hyderabad">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="city-pin-icon"
+            >
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span>Hyderabad</span>
           </span>
         </div>
 
-        {/* Center Portal Switcher for Quick Hackathon Judging */}
+        {/* Role-Appropriate Navigation */}
         {user && (
           <nav className="navbar-center-links" aria-label="Portal Navigation">
-            <button
-              type="button"
-              className={`nav-pill-link ${user.role === "donor" ? "active" : ""}`}
-              onClick={() => handleQuickJumpRole("donor")}
-            >
-              🥖 Donor Portal
-            </button>
-            <button
-              type="button"
-              className={`nav-pill-link ${user.role === "ngo" ? "active" : ""}`}
-              onClick={() => handleQuickJumpRole("ngo")}
-            >
-              🤝 NGO Relief Feed
-            </button>
-            <button
-              type="button"
-              className={`nav-pill-link ${user.role === "admin" ? "active" : ""}`}
-              onClick={() => handleQuickJumpRole("admin")}
-            >
-              🛡️ Operations Center
-            </button>
+            {user.role === "donor" && (
+              <Link to="/donor" className="nav-pill-link active">
+                <span className="nav-link-icon">🥖</span>
+                <span>Donor Portal</span>
+              </Link>
+            )}
+            {user.role === "ngo" && (
+              <Link to="/ngo" className="nav-pill-link active">
+                <span className="nav-link-icon">🤝</span>
+                <span>NGO Relief Feed</span>
+              </Link>
+            )}
+            {user.role === "admin" && (
+              <Link to="/admin" className="nav-pill-link active">
+                <span className="nav-link-icon">🛡️</span>
+                <span>Operations Center</span>
+              </Link>
+            )}
           </nav>
         )}
 
@@ -161,44 +132,22 @@ export default function Navbar() {
                 <div className="profile-dropdown-menu">
                   <div className="dropdown-user-header">
                     <p className="dropdown-name">{user.name}</p>
-                    <p className="dropdown-role">{roleMeta?.label} · {user.area || "Hyderabad"}</p>
+                    <p className="dropdown-role">
+                      {roleMeta?.label} · {user.area || "Hyderabad"}
+                    </p>
+                    {user.email && (
+                      <p className="dropdown-email-sub">{user.email}</p>
+                    )}
                   </div>
                   <div className="dropdown-divider" />
 
-                  <div className="dropdown-section-title">Explore Demo Roles</div>
-                  <button
-                    type="button"
-                    className="dropdown-item"
-                    onClick={() => handleQuickJumpRole("donor")}
-                  >
-                    <span className="dropdown-icon">🥖</span>
-                    <span>Donor Dispatch Portal</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="dropdown-item"
-                    onClick={() => handleQuickJumpRole("ngo")}
-                  >
-                    <span className="dropdown-icon">🤝</span>
-                    <span>NGO Food Rescue Feed</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="dropdown-item"
-                    onClick={() => handleQuickJumpRole("admin")}
-                  >
-                    <span className="dropdown-icon">🛡️</span>
-                    <span>Operations Admin Console</span>
-                  </button>
-
-                  <div className="dropdown-divider" />
                   <button
                     type="button"
                     className="dropdown-item"
                     onClick={handleSwitchAccount}
                   >
                     <span className="dropdown-icon">🔄</span>
-                    <span>Switch profile / account</span>
+                    <span>Switch account</span>
                   </button>
                   <button
                     type="button"

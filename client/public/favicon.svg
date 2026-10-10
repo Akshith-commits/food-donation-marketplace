@@ -1,16 +1,27 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
   <defs>
-    <linearGradient id="fbGrad" x1="6" y1="12" x2="42" y2="38" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bridgePlateFavicon" x1="6" y1="8" x2="42" y2="40" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#fb923c" />
+      <stop offset="50%" stop-color="#f97316" />
       <stop offset="100%" stop-color="#ea580c" />
     </linearGradient>
+    <linearGradient id="mealCenterFavicon" x1="18" y1="18" x2="30" y2="28" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
   </defs>
-  <!-- Background circle subtle -->
-  <rect width="48" height="48" rx="12" fill="#09090b" />
-  <!-- Bridge Arch forming plate/bowl -->
-  <path d="M10 22 C 16 12, 32 12, 38 22" stroke="url(#fbGrad)" stroke-width="3.5" stroke-linecap="round" />
-  <!-- Bowl curve underneath -->
-  <path d="M12 23 C 14 34, 34 34, 36 23" fill="none" stroke="url(#fbGrad)" stroke-width="3.5" stroke-linecap="round" />
-  <!-- Warm glow center dot representing food meal -->
-  <circle cx="24" cy="20" r="3.5" fill="#f97316" />
+  <!-- Background subtle rounded container -->
+  <rect width="48" height="48" rx="12" fill="#0c0e12" />
+  
+  <!-- Bridge Arch -->
+  <path d="M 7 21 C 13 8, 35 8, 41 21" stroke="url(#bridgePlateFavicon)" stroke-width="3.6" stroke-linecap="round" />
+  
+  <!-- Shared Plate / Bowl Curve -->
+  <path d="M 10 24 C 12 36, 36 36, 38 24" stroke="url(#bridgePlateFavicon)" stroke-width="3.6" stroke-linecap="round" />
+  
+  <!-- Hospitality Rim -->
+  <path d="M 14 23 C 18 25.5, 30 25.5, 34 23" stroke="url(#bridgePlateFavicon)" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.75" />
+  
+  <!-- Shared Meal Kernel -->
+  <circle cx="24" cy="19" r="3.5" fill="url(#mealCenterFavicon)" />
 </svg>

@@ -1,7 +1,7 @@
 // FoodBridge Client Data Store - Hyderabad Edition
 // Seeded with authentic Hyderabad donors, NGOs, 14 donations with images and geographic coordinates.
 
-import { getFoodImage } from "./foodImages";
+import { getFoodImage } from "./foodImages.js";
 
 const STORAGE_KEYS = {
   DONATIONS: "foodbridge_donations_v3",
@@ -153,6 +153,30 @@ export const HYDERABAD_NGOS = [
     joinedDate: "2026-03-12",
     description: "Community night shelter awaiting NGO credential verification.",
   },
+  {
+    id: "ngo-5",
+    name: "Secunderabad Youth Relief Society",
+    contact: "relief@secunderabadyouth.org",
+    area: "Secunderabad",
+    city: "Hyderabad",
+    verified: false,
+    lat: 17.4420,
+    lng: 78.5010,
+    joinedDate: "2026-03-18",
+    description: "Grassroots youth network distributing food packages to railway porters and night shelter workers.",
+  },
+  {
+    id: "ngo-6",
+    name: "Old City Bread Basket Initiative",
+    contact: "support@oldcitybread.org",
+    area: "Charminar",
+    city: "Hyderabad",
+    verified: false,
+    lat: 17.3580,
+    lng: 78.4710,
+    joinedDate: "2026-03-22",
+    description: "Neighborhood food rescue volunteer committee pending formal charity accreditation.",
+  },
 ];
 
 // Helper to calculate target expiry timestamps (relative to current session for live countdowns)
@@ -161,6 +185,7 @@ const now = Date.now();
 export const INITIAL_DONATIONS = [
   {
     id: "don-1",
+    donorId: "donor-1",
     foodName: "Hyderabadi Chicken Dum Biryani",
     category: "Cooked Meals",
     quantity: 65,
@@ -179,6 +204,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-2",
+    donorId: "donor-3",
     foodName: "Vegetable Pulao & Mirchi Ka Salan",
     category: "Cooked Meals",
     quantity: 80,
@@ -197,6 +223,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-3",
+    donorId: "donor-2",
     foodName: "Irani Chai & Osmania Biscuits",
     category: "Bakery",
     quantity: 120,
@@ -215,6 +242,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-4",
+    donorId: "donor-4",
     foodName: "Idli and Sambar with Coconut Chutney",
     category: "Cooked Meals",
     quantity: 90,
@@ -233,6 +261,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-5",
+    donorId: "donor-5",
     foodName: "Double Ka Meetha & Khubani Ka Meetha",
     category: "Dessert",
     quantity: 45,
@@ -251,6 +280,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-6",
+    donorId: "donor-6",
     foodName: "Dal Tadka & Steamed Rice Packs",
     category: "Cooked Meals",
     quantity: 110,
@@ -269,6 +299,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-7",
+    donorId: "donor-4",
     foodName: "Chapati and Curry Packs (Paneer Butter Masala)",
     category: "Cooked Meals",
     quantity: 70,
@@ -287,6 +318,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-8",
+    donorId: "donor-1",
     foodName: "Hyderabadi Chicken Dum Biryani",
     category: "Cooked Meals",
     quantity: 50,
@@ -305,6 +337,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-9",
+    donorId: "donor-3",
     foodName: "Vegetable Pulao & Raita Tubs",
     category: "Cooked Meals",
     quantity: 60,
@@ -323,6 +356,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-10",
+    donorId: "donor-5",
     foodName: "Khubani Ka Meetha Trays",
     category: "Dessert",
     quantity: 30,
@@ -341,6 +375,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-11",
+    donorId: "donor-4",
     foodName: "Idli and Sambar Tiffin Hampers",
     category: "Cooked Meals",
     quantity: 85,
@@ -359,6 +394,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-12",
+    donorId: "donor-2",
     foodName: "Irani Chai and Osmania Biscuits",
     category: "Bakery",
     quantity: 100,
@@ -377,6 +413,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-13",
+    donorId: "donor-1",
     foodName: "Hyderabadi Chicken Dum Biryani Feast",
     category: "Cooked Meals",
     quantity: 150,
@@ -395,6 +432,7 @@ export const INITIAL_DONATIONS = [
   },
   {
     id: "don-14",
+    donorId: "donor-6",
     foodName: "Chapati & Dal Tadka Family Packs",
     category: "Cooked Meals",
     quantity: 95,
@@ -435,6 +473,56 @@ export function initializeStore(force = false) {
     localStorage.setItem(STORAGE_KEYS.NGOS, JSON.stringify(HYDERABAD_NGOS));
     localStorage.setItem(STORAGE_KEYS.DONATIONS, JSON.stringify(INITIAL_DONATIONS));
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, "true");
+  } else {
+    // Safe, idempotent migration for existing records in localStorage
+    // 1. Migrate donations missing donorId
+    try {
+      const rawDonations = localStorage.getItem(STORAGE_KEYS.DONATIONS);
+      if (rawDonations) {
+        const parsedDonations = JSON.parse(rawDonations);
+        let donationsMigrated = false;
+        const donorNameToId = {
+          "Charminar Biryani House": "donor-1",
+          "Nawab's Irani Cafe": "donor-2",
+          "Jubilee Hills Banquet Hall": "donor-3",
+          "Madhapur Tiffin Centre": "donor-4",
+          "Banjara Hills Sweets & Bakery": "donor-5",
+          "Gachibowli Corporate Canteen": "donor-6",
+          "Priya Sharma": "ind-1",
+          "Arjun Reddy": "ind-2",
+          "Ananya Rao": "ind-3",
+        };
+        const updatedDonations = parsedDonations.map((item) => {
+          if (!item.donorId) {
+            donationsMigrated = true;
+            const mappedId = donorNameToId[item.donorName] || (item.donorName ? `donor-${item.donorName.toLowerCase().replace(/[^a-z0-9]/g, "-")}` : "donor-1");
+            return { ...item, donorId: mappedId };
+          }
+          return item;
+        });
+        if (donationsMigrated) {
+          localStorage.setItem(STORAGE_KEYS.DONATIONS, JSON.stringify(updatedDonations));
+        }
+      }
+    } catch (e) {
+      console.warn("Donation migration notice:", e);
+    }
+
+    // 2. Migrate NGOs: Ensure all seeded NGOs exist without overwriting verification status
+    try {
+      const rawNgos = localStorage.getItem(STORAGE_KEYS.NGOS);
+      if (rawNgos) {
+        const existingNgos = JSON.parse(rawNgos);
+        const existingIds = new Set(existingNgos.map((n) => n.id));
+        const missingNgos = HYDERABAD_NGOS.filter((n) => !existingIds.has(n.id));
+        if (missingNgos.length > 0) {
+          const mergedNgos = [...existingNgos, ...missingNgos];
+          localStorage.setItem(STORAGE_KEYS.NGOS, JSON.stringify(mergedNgos));
+        }
+      }
+    } catch (e) {
+      console.warn("NGO migration notice:", e);
+    }
   }
 }
 
@@ -469,8 +557,13 @@ export function addDonation(data) {
     expTimestamp = Date.now() + 3 * 3600 * 1000; // default 3 hours
   }
 
+  const activeUser = getCurrentUser();
+  const resolvedDonorId = data.donorId || activeUser?.id || "donor-1";
+  const resolvedDonorName = data.donorName || activeUser?.name || "Charminar Biryani House";
+
   const newDonation = {
     id: `don-${Date.now()}`,
+    donorId: resolvedDonorId,
     foodName: data.foodName || "Surplus Food Batch",
     category: data.category || "Cooked Meals",
     quantity: Number(data.quantity) || 1,
@@ -483,7 +576,7 @@ export function addDonation(data) {
     expiryTimestamp: expTimestamp,
     description: data.description || "",
     status: "available",
-    donorName: data.donorName || "Charminar Biryani House",
+    donorName: resolvedDonorName,
     claimedByName: null,
     imageUrl: data.imageUrl || getFoodImage(data.foodName, data.category),
     createdAt: new Date().toISOString(),
@@ -549,6 +642,13 @@ export function verifyNgo(ngoId) {
     return ngo;
   });
   localStorage.setItem(STORAGE_KEYS.NGOS, JSON.stringify(updated));
+
+  // If currently active user session is this NGO, keep active session in sync
+  const curUser = getCurrentUser();
+  if (curUser && curUser.role === "ngo" && (curUser.id === ngoId || curUser.name === updatedNgo?.name)) {
+    setCurrentUser({ ...curUser, verified: true });
+  }
+
   return updatedNgo;
 }
 

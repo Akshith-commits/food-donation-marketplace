@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   setCurrentUser,
+  getNgos,
   HYDERABAD_DONORS,
   HYDERABAD_INDIVIDUAL_DONORS,
   HYDERABAD_NGOS,
@@ -33,6 +34,7 @@ export default function LoginPage() {
 
   // Business Donor state
   const [selectedBusinessId, setSelectedBusinessId] = useState("donor-1");
+  const [businessEmail, setBusinessEmail] = useState(HYDERABAD_DONORS[0].email);
 
   // Individual Donor state
   const [selectedIndividualId, setSelectedIndividualId] = useState("ind-1");
@@ -41,21 +43,49 @@ export default function LoginPage() {
   const [individualArea, setIndividualArea] = useState("Banjara Hills");
 
   // NGO State
+  const [ngosList, setNgosList] = useState(() => getNgos());
   const [selectedNgoId, setSelectedNgoId] = useState("ngo-1");
+  const [ngoContactEmail, setNgoContactEmail] = useState(HYDERABAD_NGOS[0].contact);
+
+  // Refresh NGOs from persistent store on mount
+  useEffect(() => {
+    const list = getNgos();
+    if (list && list.length > 0) {
+      setNgosList(list);
+    }
+  }, []);
 
   // Admin State
   const [adminName, setAdminName] = useState("Operations Administrator");
   const [adminEmail, setAdminEmail] = useState("admin@foodbridge.org");
 
-  // Demo password
-  const [demoPasscode, setDemoPasscode] = useState("••••••••••••");
+  // Editable demo password / security key
+  const [demoPasscode, setDemoPasscode] = useState("demo2026");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Active objects
   const activeBusiness =
     HYDERABAD_DONORS.find((d) => d.id === selectedBusinessId) || HYDERABAD_DONORS[0];
   const activeNgo =
-    HYDERABAD_NGOS.find((n) => n.id === selectedNgoId) || HYDERABAD_NGOS[0];
+    ngosList.find((n) => n.id === selectedNgoId) ||
+    HYDERABAD_NGOS.find((n) => n.id === selectedNgoId) ||
+    HYDERABAD_NGOS[0];
+
+  const handleSelectBusiness = (id) => {
+    setSelectedBusinessId(id);
+    const found = HYDERABAD_DONORS.find((d) => d.id === id);
+    if (found) {
+      setBusinessEmail(found.email);
+    }
+  };
+
+  const handleSelectNgo = (id) => {
+    setSelectedNgoId(id);
+    const found = ngosList.find((n) => n.id === id) || HYDERABAD_NGOS.find((n) => n.id === id);
+    if (found) {
+      setNgoContactEmail(found.contact);
+    }
+  };
 
   // When picking a seeded individual
   const handleSelectIndividual = (id) => {
@@ -82,15 +112,20 @@ export default function LoginPage() {
       if (activeTab === "donor") {
         if (donorType === "business") {
           setCurrentUser({
+            id: activeBusiness.id,
             role: "donor",
             donorType: "business",
             name: activeBusiness.name,
-            email: activeBusiness.email,
+            email: businessEmail.trim() || activeBusiness.email,
             area: activeBusiness.area,
             address: activeBusiness.address,
           });
         } else {
+          const indId = selectedIndividualId === "custom"
+            ? `ind-${Date.now()}`
+            : selectedIndividualId;
           setCurrentUser({
+            id: indId,
             role: "donor",
             donorType: "individual",
             name: individualName.trim() || "Community Donor",
@@ -101,19 +136,24 @@ export default function LoginPage() {
         }
         navigate("/donor");
       } else if (activeTab === "ngo") {
+        const freshNgos = getNgos();
+        const currentNgo = freshNgos.find((n) => n.id === selectedNgoId) || activeNgo;
         setCurrentUser({
+          id: currentNgo.id,
           role: "ngo",
-          name: activeNgo.name,
-          email: activeNgo.contact,
-          area: activeNgo.area,
-          verified: Boolean(activeNgo.verified),
+          name: currentNgo.name,
+          email: ngoContactEmail.trim() || currentNgo.contact,
+          area: currentNgo.area,
+          verified: Boolean(currentNgo.verified),
         });
         navigate("/ngo");
       } else if (activeTab === "admin") {
         setCurrentUser({
+          id: "admin-1",
           role: "admin",
           name: adminName.trim() || "Operations Administrator",
           email: adminEmail.trim() || "admin@foodbridge.org",
+          area: "Hyderabad Operations",
         });
         navigate("/admin");
       }
@@ -247,12 +287,12 @@ export default function LoginPage() {
                   {donorType === "business" ? (
                     <>
                       <div className="form-group mb-3">
-                        <label htmlFor="businessSelect">Seeded Commercial Donor</label>
+                        <label htmlFor="businessSelect">Commercial Kitchen Profile</label>
                         <select
                           id="businessSelect"
                           className="input-select"
                           value={selectedBusinessId}
-                          onChange={(e) => setSelectedBusinessId(e.target.value)}
+                          onChange={(e) => handleSelectBusiness(e.target.value)}
                         >
                           {HYDERABAD_DONORS.map((d) => (
                             <option key={d.id} value={d.id}>
@@ -263,13 +303,15 @@ export default function LoginPage() {
                       </div>
 
                       <div className="form-group mb-3">
-                        <label htmlFor="businessEmail">Contact Email</label>
+                        <label htmlFor="businessEmail">Contact / Work Email</label>
                         <input
                           id="businessEmail"
                           type="email"
-                          readOnly
-                          value={activeBusiness.email}
-                          className="input-text readonly"
+                          required
+                          value={businessEmail}
+                          onChange={(e) => setBusinessEmail(e.target.value)}
+                          className="input-text"
+                          placeholder="kitchen@example.com"
                         />
                       </div>
 
@@ -362,11 +404,11 @@ export default function LoginPage() {
                       id="ngoSelect"
                       className="input-select"
                       value={selectedNgoId}
-                      onChange={(e) => setSelectedNgoId(e.target.value)}
+                      onChange={(e) => handleSelectNgo(e.target.value)}
                     >
-                      {HYDERABAD_NGOS.map((n) => (
+                      {ngosList.map((n) => (
                         <option key={n.id} value={n.id}>
-                          {n.name} — {n.verified ? "✓ Verified" : "⚠️ Pending Accreditation"} ({n.area})
+                          {n.name} — {n.verified ? "✓ Verified Partner" : "⚠️ Pending Accreditation"} ({n.area})
                         </option>
                       ))}
                     </select>
@@ -380,20 +422,22 @@ export default function LoginPage() {
                     <div className="preview-row">
                       <span className="preview-label">Accreditation</span>
                       <span className={`status-pill ${activeNgo.verified ? "status-delivered" : "status-claimed"}`}>
-                        {activeNgo.verified ? "Accredited for Instant Claims" : "Pending Verification"}
+                        {activeNgo.verified ? "Accredited for Instant Claims" : "Pending Administrative Review"}
                       </span>
                     </div>
                     <p className="ngo-desc-sub">{activeNgo.description}</p>
                   </div>
 
                   <div className="form-group mb-3">
-                    <label htmlFor="ngoContact">Contact Representative Email</label>
+                    <label htmlFor="ngoContact">Representative Contact Email</label>
                     <input
                       id="ngoContact"
                       type="email"
-                      readOnly
-                      value={activeNgo.contact}
-                      className="input-text readonly"
+                      required
+                      value={ngoContactEmail}
+                      onChange={(e) => setNgoContactEmail(e.target.value)}
+                      className="input-text"
+                      placeholder="representative@ngo.org"
                     />
                   </div>
                 </motion.div>
@@ -449,8 +493,8 @@ export default function LoginPage() {
             {/* Passcode field (clear simulated label) */}
             <div className="form-group mb-4">
               <div className="label-row">
-                <label htmlFor="demoPass">Demo Security Passcode</label>
-                <span className="forgot-text">Any passcode accepted</span>
+                <label htmlFor="demoPass">Password / Security Key</label>
+                <span className="forgot-text">Demo mode: any password accepted</span>
               </div>
               <input
                 id="demoPass"
@@ -459,6 +503,7 @@ export default function LoginPage() {
                 onChange={(e) => setDemoPasscode(e.target.value)}
                 className="input-text"
                 autoComplete="current-password"
+                placeholder="Enter password..."
               />
             </div>
 

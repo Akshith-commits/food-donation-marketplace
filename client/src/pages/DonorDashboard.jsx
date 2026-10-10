@@ -34,10 +34,12 @@ const HYDERABAD_AREAS = [
 
 export default function DonorDashboard() {
   const currentUser = getCurrentUser() || {
+    id: "donor-1",
     name: "Charminar Biryani House",
     role: "donor",
     donorType: "business",
     area: "Charminar",
+    address: "Shop 14, Near Gulzar Houz, Charminar, Hyderabad",
   };
   const { addToast } = useToast();
 
@@ -138,6 +140,8 @@ export default function DonorDashboard() {
     const targetTimestamp = Date.now() + Math.round(hrs * 3600 * 1000);
 
     const newDonation = addDonation({
+      donorId: currentUser.id || "donor-1",
+      donorName: currentUser.name,
       foodName: formData.foodName,
       category: formData.category,
       quantity: formData.quantity,
@@ -147,7 +151,6 @@ export default function DonorDashboard() {
       expiryTimestamp: targetTimestamp,
       expiryTime: hrs < 1 ? "Under 1 hour" : `In ${hrs} hours`,
       description: formData.description,
-      donorName: currentUser.name,
     });
 
     loadDonations();
@@ -169,15 +172,23 @@ export default function DonorDashboard() {
     setTimeout(() => setPostedSuccessId(null), 4000);
   };
 
+  // Check if listing belongs to currently signed-in donor
+  const isOwner = (item) => {
+    if (item.donorId && currentUser.id) {
+      return item.donorId === currentUser.id;
+    }
+    return item.donorName === currentUser.name;
+  };
+
   // Filtered donations
   const displayedDonations = donations.filter((item) => {
-    const matchOwner = filterView === "my" ? item.donorName === currentUser.name : true;
+    const matchOwner = filterView === "my" ? isOwner(item) : true;
     const matchStatus = statusFilter === "all" ? true : item.status === statusFilter;
     return matchOwner && matchStatus;
   });
 
-  // Calculate my impact metrics
-  const myTotalDonations = donations.filter((d) => d.donorName === currentUser.name);
+  // Calculate my impact metrics strictly for this account
+  const myTotalDonations = donations.filter(isOwner);
   const myMealsShared = myTotalDonations.reduce((sum, d) => sum + (Number(d.quantity) || 0), 0);
   const myKgSaved = Math.round(myMealsShared * 0.42);
   const distinctNgosHelped = new Set(
@@ -210,7 +221,7 @@ export default function DonorDashboard() {
             </p>
           </div>
           <div className="header-meta-pill">
-            <span className="live-dot" />
+            <span className="location-pin-icon">📍</span>
             <span>Zone: <strong>{currentUser.area || "Hyderabad"}</strong></span>
           </div>
         </div>
@@ -256,7 +267,7 @@ export default function DonorDashboard() {
             <div className="card-icon-wrap icon-emerald">🤝</div>
             <div className="card-stat-wrap">
               <span className="stat-metric">
-                <CountUp end={distinctNgosHelped || 2} />
+                <CountUp end={distinctNgosHelped} />
               </span>
               <span className="stat-label">NGO Shelters Supported</span>
             </div>

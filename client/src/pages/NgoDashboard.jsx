@@ -29,7 +29,7 @@ export default function NgoDashboard() {
   const { addToast } = useToast();
 
   const [donations, setDonations] = useState(() => getDonations());
-  const [ngos] = useState(() => getNgos());
+  const [ngos, setNgos] = useState(() => getNgos());
   const [activeTab, setActiveTab] = useState("available"); // 'available' or 'my-claims'
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'map'
 
@@ -43,13 +43,15 @@ export default function NgoDashboard() {
 
   const loadData = () => {
     setDonations(getDonations());
+    setNgos(getNgos());
   };
 
   // Check if this NGO is verified in persistent store
   const persistentNgo = ngos.find(
-    (n) => n.name.toLowerCase() === currentUser.name.toLowerCase()
+    (n) => (currentUser.id && n.id === currentUser.id) ||
+           n.name.toLowerCase() === currentUser.name.toLowerCase()
   );
-  const isVerified = persistentNgo ? Boolean(persistentNgo.verified) : currentUser.verified ?? true;
+  const isVerified = persistentNgo ? Boolean(persistentNgo.verified) : Boolean(currentUser.verified);
 
   const availableDonations = donations.filter((d) => d.status === "available");
   const myClaims = donations.filter((d) => d.claimedByName === currentUser.name);
