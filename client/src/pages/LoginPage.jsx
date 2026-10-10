@@ -1,221 +1,247 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { setCurrentUser, getCurrentUser, getNgos } from "../lib/store";
-import Banner from "../components/Banner";
+import { motion, AnimatePresence } from "framer-motion";
+import { setCurrentUser, HYDERABAD_DONORS, HYDERABAD_NGOS } from "../lib/store";
+import Logo from "../components/Logo";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const existingUser = getCurrentUser();
+  const [activeTab, setActiveTab] = useState("donor"); // 'donor', 'ngo', 'admin'
+  const [selectedDonorId, setSelectedDonorId] = useState("donor-1");
+  const [selectedNgoId, setSelectedNgoId] = useState("ngo-1");
+  const [password, setPassword] = useState("••••••••••••");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [name, setName] = useState(existingUser?.name || "");
-  const [selectedNgoType, setSelectedNgoType] = useState("verified"); // 'verified' or 'unverified'
+  const activeDonor = HYDERABAD_DONORS.find((d) => d.id === selectedDonorId) || HYDERABAD_DONORS[0];
+  const activeNgo = HYDERABAD_NGOS.find((n) => n.id === selectedNgoId) || HYDERABAD_NGOS[0];
 
-  const ngos = getNgos();
+  const handleSignIn = (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  const verifiedNgo = ngos.find((n) => n.verified) || { name: "Hope Food Bank" };
-  const unverifiedNgo = ngos.find((n) => !n.verified) || { name: "Community Table Relief" };
-
-  const handleSelectRole = (role) => {
-    let finalName = name.trim();
-
-    if (role === "donor") {
-      if (!finalName) finalName = "Golden Spoon Bakery";
-      setCurrentUser({ role: "donor", name: finalName });
-      navigate("/donor");
-    } else if (role === "ngo") {
-      if (!finalName) {
-        finalName = selectedNgoType === "unverified" ? unverifiedNgo.name : verifiedNgo.name;
+    setTimeout(() => {
+      if (activeTab === "donor") {
+        setCurrentUser({
+          role: "donor",
+          name: activeDonor.name,
+          email: activeDonor.email,
+          area: activeDonor.area,
+        });
+        navigate("/donor");
+      } else if (activeTab === "ngo") {
+        setCurrentUser({
+          role: "ngo",
+          name: activeNgo.name,
+          email: activeNgo.contact,
+          area: activeNgo.area,
+          verified: activeNgo.verified,
+        });
+        navigate("/ngo");
+      } else if (activeTab === "admin") {
+        setCurrentUser({
+          role: "admin",
+          name: "Operations Administrator",
+          email: "admin@foodbridge.org",
+        });
+        navigate("/admin");
       }
-      setCurrentUser({ role: "ngo", name: finalName });
-      navigate("/ngo");
-    } else if (role === "admin") {
-      if (!finalName) finalName = "Platform Administrator";
-      setCurrentUser({ role: "admin", name: finalName });
-      navigate("/admin");
-    }
+    }, 400);
   };
 
-  const setPresetProfile = (presetName, role) => {
-    setName(presetName);
-    if (role === "ngo") {
-      if (presetName === unverifiedNgo.name) {
-        setSelectedNgoType("unverified");
-      } else {
-        setSelectedNgoType("verified");
-      }
-    }
+  const getEmailForTab = () => {
+    if (activeTab === "donor") return activeDonor.email;
+    if (activeTab === "ngo") return activeNgo.contact;
+    return "admin@foodbridge.org";
   };
 
   return (
-    <div className="login-page-root">
-      <Banner />
+    <div className="signin-split-container">
+      {/* Left visual column with authentic food photograph background */}
+      <div className="signin-left-col">
+        <div
+          className="signin-bg-image"
+          style={{ backgroundImage: `url('/images/biryani.jpg')` }}
+        />
+        <div className="signin-bg-overlay" />
 
-      <div className="login-container">
-        <div className="login-card">
-          <div className="login-header">
-            <Link to="/" className="login-logo-link">
-              <span className="brand-icon">🍲</span>
-              <span className="brand-text">Food<span className="brand-accent">Bridge</span></span>
-            </Link>
-            <h1>Demo Access Portal</h1>
-            <p className="login-subtext">
-              Select any role below to experience the end-to-end food rescue workflow. No password required for this prototype.
+        <div className="signin-left-content">
+          <Link to="/" className="signin-brand-link">
+            <Logo size="lg" />
+          </Link>
+
+          <div className="signin-hero-statement">
+            <h1>Connecting surplus kitchens with local hunger relief across Hyderabad.</h1>
+            <p>
+              From Charminar to Hitech City, commercial kitchens redirect surplus meals to accredited shelters in under 60 seconds.
             </p>
           </div>
 
-          {existingUser && (
-            <div className="current-session-box">
-              <span className="session-dot" />
-              <span>
-                Currently active: <strong>{existingUser.name}</strong> ({existingUser.role.toUpperCase()})
-              </span>
+          <div className="signin-stats-pills">
+            <div className="pill-item">
+              <span className="pill-val">1,150+</span>
+              <span className="pill-lbl">Meals Recovered</span>
             </div>
-          )}
-
-          {/* Optional Name Field */}
-          <div className="form-group name-field-group">
-            <label htmlFor="user-name-input">
-              User / Organization Name <span className="label-optional">(optional - defaults provided)</span>
-            </label>
-            <input
-              id="user-name-input"
-              type="text"
-              placeholder="e.g. Golden Spoon Bakery, Hope Food Bank..."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="login-input"
-            />
-          </div>
-
-          {/* Quick preset chips */}
-          <div className="presets-section">
-            <span className="presets-title">Quick Demo Profiles:</span>
-            <div className="preset-chips">
-              <button
-                type="button"
-                className="chip-btn"
-                onClick={() => setPresetProfile("Golden Spoon Bakery", "donor")}
-              >
-                🥖 Golden Spoon (Donor)
-              </button>
-              <button
-                type="button"
-                className="chip-btn"
-                onClick={() => setPresetProfile(verifiedNgo.name, "ngo")}
-              >
-                ✅ {verifiedNgo.name} (Verified NGO)
-              </button>
-              <button
-                type="button"
-                className="chip-btn chip-warning"
-                onClick={() => setPresetProfile(unverifiedNgo.name, "ngo")}
-              >
-                ⚠️ {unverifiedNgo.name} (Unverified NGO)
-              </button>
-              <button
-                type="button"
-                className="chip-btn"
-                onClick={() => setPresetProfile("Platform Administrator", "admin")}
-              >
-                🛡️ Platform Admin
-              </button>
+            <div className="pill-divider" />
+            <div className="pill-item">
+              <span className="pill-val">6 Zones</span>
+              <span className="pill-lbl">Active Coverage</span>
             </div>
-          </div>
-
-          {/* Big Role Action Buttons */}
-          <div className="role-buttons-grid">
-            {/* Donor Option */}
-            <div className="role-card role-donor" onClick={() => handleSelectRole("donor")}>
-              <div className="role-card-badge">Commercial Donors</div>
-              <div className="role-card-icon">🥖</div>
-              <h3>Continue as Donor</h3>
-              <p>Post excess batches in seconds, manage pickup locations, and monitor distribution statuses.</p>
-              <button
-                type="button"
-                className="role-action-btn btn-donor"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectRole("donor");
-                }}
-              >
-                Enter Donor Portal →
-              </button>
+            <div className="pill-divider" />
+            <div className="pill-item">
+              <span className="pill-val">100%</span>
+              <span className="pill-lbl">GPS Verified</span>
             </div>
-
-            {/* NGO Option */}
-            <div className="role-card role-ngo" onClick={() => handleSelectRole("ngo")}>
-              <div className="role-card-badge">Charities & Shelters</div>
-              <div className="role-card-icon">🤝</div>
-              <h3>Continue as NGO</h3>
-              <p>Discover real-time donation feeds, claim available meals, and manage pickup logistics.</p>
-
-              <div className="ngo-preset-toggle" onClick={(e) => e.stopPropagation()}>
-                <span className="toggle-label">Test Verification State:</span>
-                <div className="radio-group">
-                  <label className="radio-item">
-                    <input
-                      type="radio"
-                      name="ngoVerifiedState"
-                      checked={selectedNgoType === "verified"}
-                      onChange={() => {
-                        setSelectedNgoType("verified");
-                        setName(verifiedNgo.name);
-                      }}
-                    />
-                    <span>Verified</span>
-                  </label>
-                  <label className="radio-item">
-                    <input
-                      type="radio"
-                      name="ngoVerifiedState"
-                      checked={selectedNgoType === "unverified"}
-                      onChange={() => {
-                        setSelectedNgoType("unverified");
-                        setName(unverifiedNgo.name);
-                      }}
-                    />
-                    <span>Unverified (Pending)</span>
-                  </label>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                className="role-action-btn btn-ngo"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectRole("ngo");
-                }}
-              >
-                Enter NGO Hub →
-              </button>
-            </div>
-
-            {/* Admin Option */}
-            <div className="role-card role-admin" onClick={() => handleSelectRole("admin")}>
-              <div className="role-card-badge">Operations</div>
-              <div className="role-card-icon">📊</div>
-              <h3>Continue as Admin</h3>
-              <p>Inspect city-wide food recovery metrics, verify onboarding NGOs, and monitor platform activity.</p>
-              <button
-                type="button"
-                className="role-action-btn btn-admin"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectRole("admin");
-                }}
-              >
-                Enter Admin Center →
-              </button>
-            </div>
-          </div>
-
-          <div className="login-footer">
-            <Link to="/" className="back-home-link">
-              ← Return to Landing Page
-            </Link>
           </div>
         </div>
+      </div>
+
+      {/* Right column: glass sign-in card */}
+      <div className="signin-right-col">
+        <motion.div
+          className="signin-glass-card"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="card-top-header">
+            <h2>Welcome back</h2>
+            <p>Sign in to your organization's FoodBridge account</p>
+          </div>
+
+          {/* Three Role Tabs */}
+          <div className="role-tab-switch">
+            {[
+              { id: "donor", label: "Donor", icon: "🥖" },
+              { id: "ngo", label: "NGO", icon: "🤝" },
+              { id: "admin", label: "Admin", icon: "🛡️" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                className={`tab-btn-pill ${activeTab === tab.id ? "active" : ""}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {activeTab === tab.id && (
+                  <motion.div
+                    className="tab-pill-highlight"
+                    layoutId="activeRoleTab"
+                    transition={{ type: "spring", stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="tab-btn-label">
+                  <span className="tab-icon">{tab.icon}</span>
+                  {tab.label}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Animated Tab Content Form */}
+          <form onSubmit={handleSignIn} className="signin-form">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="tab-fields-wrap"
+              >
+                {activeTab === "donor" && (
+                  <div className="form-group mb-3">
+                    <label htmlFor="donorSelect">Organization Account</label>
+                    <select
+                      id="donorSelect"
+                      className="input-select"
+                      value={selectedDonorId}
+                      onChange={(e) => setSelectedDonorId(e.target.value)}
+                    >
+                      {HYDERABAD_DONORS.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} ({d.area})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {activeTab === "ngo" && (
+                  <div className="form-group mb-3">
+                    <label htmlFor="ngoSelect">Relief Organization</label>
+                    <select
+                      id="ngoSelect"
+                      className="input-select"
+                      value={selectedNgoId}
+                      onChange={(e) => setSelectedNgoId(e.target.value)}
+                    >
+                      {HYDERABAD_NGOS.map((n) => (
+                        <option key={n.id} value={n.id}>
+                          {n.name} {n.verified ? "(Verified)" : "(Pending Verification)"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {activeTab === "admin" && (
+                  <div className="form-group mb-3">
+                    <label>Role</label>
+                    <div className="input-static">
+                      Operations & Dispatch Administrator
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group mb-3">
+                  <label htmlFor="signinEmail">Work Email</label>
+                  <input
+                    id="signinEmail"
+                    type="email"
+                    required
+                    readOnly
+                    value={getEmailForTab()}
+                    className="input-text readonly"
+                  />
+                </div>
+
+                <div className="form-group mb-4">
+                  <div className="label-row">
+                    <label htmlFor="signinPassword">Password</label>
+                    <span className="forgot-text">Reset key</span>
+                  </div>
+                  <input
+                    id="signinPassword"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="input-text"
+                  />
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            <motion.button
+              type="submit"
+              className="btn-signin-submit"
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <span className="btn-loading-text">
+                  <span className="spinner-dot" /> Authenticating...
+                </span>
+              ) : (
+                `Sign in as ${activeTab === "donor" ? "Donor" : activeTab === "ngo" ? "NGO Partner" : "Admin"} →`
+              )}
+            </motion.button>
+          </form>
+
+          <div className="card-footer-note">
+            <span>Security protected by FoodBridge Identity Services</span>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

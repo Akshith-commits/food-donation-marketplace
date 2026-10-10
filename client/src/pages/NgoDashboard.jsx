@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar";
-import Banner from "../components/Banner";
 import {
   getDonations,
   claimDonation,
@@ -9,84 +9,114 @@ import {
   getNgos,
   getCurrentUser,
 } from "../lib/store";
+import CountdownBadge from "../components/CountdownBadge";
+import StatusTimeline from "../components/StatusTimeline";
+import DonationMap from "../components/DonationMap";
+import DonationCard from "../components/DonationCard";
+import { useToast } from "../components/useToast";
+import { getFoodImage } from "../lib/foodImages";
+
+const CATEGORY_CHIPS = ["All Categories", "Cooked Meals", "Biryani & Mughlai", "South Indian Tiffins", "Bakery & Tea", "Dessert"];
+const AREA_CHIPS = ["All Areas", "Charminar", "Secunderabad", "Jubilee Hills", "Madhapur", "Banjara Hills", "Gachibowli", "Kukatpally", "Begumpet", "Ameerpet", "Hitech City"];
 
 export default function NgoDashboard() {
-  const currentUser = getCurrentUser() || { name: "Hope Food Bank", role: "ngo" };
+  const currentUser = getCurrentUser() || {
+    name: "Hyderabad Food Rescue Foundation",
+    role: "ngo",
+    area: "Ameerpet",
+    verified: true,
+  };
+  const { addToast } = useToast();
+
   const [donations, setDonations] = useState(() => getDonations());
-  const [ngos, setNgos] = useState(() => getNgos());
-  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [ngos] = useState(() => getNgos());
   const [activeTab, setActiveTab] = useState("available"); // 'available' or 'my-claims'
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'map'
+
+  // Filter & Search states
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [selectedArea, setSelectedArea] = useState("All Areas");
+
+  // Confirmation Modal State
+  const [claimModalItem, setClaimModalItem] = useState(null);
 
   const loadData = () => {
     setDonations(getDonations());
-    setNgos(getNgos());
   };
 
-  // Check if current NGO is verified
-  const currentNgoRecord = ngos.find(
+  // Check if this NGO is verified in persistent store
+  const persistentNgo = ngos.find(
     (n) => n.name.toLowerCase() === currentUser.name.toLowerCase()
   );
-  // Default to false if found and not verified, true if found and verified, or fallback check
-  const isVerified = currentNgoRecord ? Boolean(currentNgoRecord.verified) : true;
+  const isVerified = persistentNgo ? Boolean(persistentNgo.verified) : currentUser.verified ?? true;
 
   const availableDonations = donations.filter((d) => d.status === "available");
   const myClaims = donations.filter((d) => d.claimedByName === currentUser.name);
 
-  const handleClaim = (donation) => {
+  // Filter available items
+  const filteredAvailable = availableDonations.filter((item) => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchQuery =
+      !q ||
+      item.foodName.toLowerCase().includes(q) ||
+      item.donorName.toLowerCase().includes(q) ||
+      item.area.toLowerCase().includes(q) ||
+      (item.description && item.description.toLowerCase().includes(q));
+
+    const matchCategory =
+      selectedCategory === "All Categories" ||
+      item.category.toLowerCase().includes(selectedCategory.toLowerCase());
+
+    const matchArea =
+      selectedArea === "All Areas" ||
+      item.area.toLowerCase() === selectedArea.toLowerCase();
+
+    return matchQuery && matchCategory && matchArea;
+  });
+
+  const handleOpenClaimModal = (item) => {
     if (!isVerified) {
-      alert("Verification required: Your NGO account is pending administrative approval. You cannot claim donations until verified.");
+      addToast("Your NGO account is pending administrative verification.", "warning");
       return;
     }
+    setClaimModalItem(item);
+  };
 
-    claimDonation(donation.id, currentUser.name);
+  const handleConfirmClaim = () => {
+    if (!claimModalItem) return;
+    claimDonation(claimModalItem.id, currentUser.name);
     loadData();
-    setFeedbackMsg(`Successfully claimed "${donation.foodName}"! Added to My Claims.`);
-    setTimeout(() => setFeedbackMsg(""), 5000);
+    addToast(`Successfully claimed "${claimModalItem.foodName}"! Added to My Claims.`, "success");
+    setClaimModalItem(null);
   };
 
   const handleStatusUpdate = (donationId, newStatus, foodName) => {
     updateStatus(donationId, newStatus);
     loadData();
     const actionLabel = newStatus === "picked_up" ? "marked as Picked Up" : "marked as Delivered";
-    setFeedbackMsg(`Status updated: "${foodName}" is now ${actionLabel}!`);
-    setTimeout(() => setFeedbackMsg(""), 5000);
-  };
-
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case "available":
-        return "badge-status-available";
-      case "claimed":
-        return "badge-status-claimed";
-      case "picked_up":
-        return "badge-status-pickedup";
-      case "delivered":
-        return "badge-status-delivered";
-      default:
-        return "badge-status-default";
-    }
+    addToast(`"${foodName}" has been ${actionLabel}!`, "success");
   };
 
   return (
     <div className="portal-root">
-      <Banner onReset={loadData} />
       <Navbar />
 
       <main className="portal-content">
         <div className="portal-header">
           <div>
-            <div className="portal-breadcrumb">NGO Network Hub / Food Rescue Feed</div>
-            <h1 className="portal-title">Welcome, {currentUser.name}</h1>
+            <div className="portal-breadcrumb">NGO Relief Network Hub / Hyderabad Feed</div>
+            <h1 className="portal-title">{currentUser.name}</h1>
             <p className="portal-subtitle">
-              Claim surplus meals from local commercial donors and coordinate volunteer distribution.
+              Coordinate surplus food rescue and direct delivery to shelters and community kitchens across Hyderabad.
             </p>
           </div>
 
-          <div className="ngo-status-pill-container">
+          <div className="ngo-header-status">
             {isVerified ? (
               <div className="badge-verified">
                 <span className="badge-icon">✓</span>
-                <span>Verified NGO Partner</span>
+                <span>Verified Partner</span>
               </div>
             ) : (
               <div className="badge-unverified">
@@ -97,145 +127,188 @@ export default function NgoDashboard() {
           </div>
         </div>
 
-        {/* Verification Warning for unverified NGOs */}
+        {/* Unverified Warning Banner */}
         {!isVerified && (
-          <div className="verification-warning-banner">
+          <motion.div
+            className="verification-warning-banner"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
             <div className="warning-left">
               <span className="warning-icon">⚠️</span>
               <div>
-                <strong>Account Pending Verification</strong>
+                <strong>Organization Pending Verification</strong>
                 <p>
-                  Your organization (<strong>{currentUser.name}</strong>) is currently unverified. Only accredited NGOs can claim active food donations.
+                  <strong>{currentUser.name}</strong> is currently pending compliance review. Only accredited NGOs can claim active food batches.
                 </p>
               </div>
             </div>
             <div className="warning-right">
               <Link to="/admin" className="btn-secondary-sm">
-                Go to Admin Portal to Verify →
+                Switch to Admin Portal to Verify →
               </Link>
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {feedbackMsg && (
-          <div className="alert-success">
-            <span className="alert-icon">✓</span>
-            <span>{feedbackMsg}</span>
+        {/* Section A5: Polished Segmented Control Tabs */}
+        <div className="ngo-segmented-control-container">
+          <div className="ngo-segmented-tabs" role="tablist" aria-label="Donation Views">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "available"}
+              className={`segmented-tab-btn ${activeTab === "available" ? "active" : ""}`}
+              onClick={() => setActiveTab("available")}
+            >
+              <span className="tab-btn-text">Available Surplus Meals</span>
+              <span className="tab-count-badge">{availableDonations.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "my-claims"}
+              className={`segmented-tab-btn ${activeTab === "my-claims" ? "active" : ""}`}
+              onClick={() => setActiveTab("my-claims")}
+            >
+              <span className="tab-btn-text">My Claims & Active Dispatches</span>
+              <span className="tab-count-badge">{myClaims.length}</span>
+            </button>
           </div>
-        )}
-
-        {/* Navigation Tabs */}
-        <div className="ngo-nav-tabs">
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "available" ? "active" : ""}`}
-            onClick={() => setActiveTab("available")}
-          >
-            Available Surplus Meals ({availableDonations.length})
-          </button>
-          <button
-            type="button"
-            className={`tab-btn ${activeTab === "my-claims" ? "active" : ""}`}
-            onClick={() => setActiveTab("my-claims")}
-          >
-            My Claims & Delivery Tracking ({myClaims.length})
-          </button>
         </div>
 
-        {/* Available Donations Grid View */}
+        {/* AVAILABLE DONATIONS TAB */}
         {activeTab === "available" && (
           <section className="ngo-section">
-            <div className="section-header-row">
-              <div>
-                <h2>Live Available Donations</h2>
-                <p>Real-time surplus batches posted by restaurants, supermarkets, and catering halls.</p>
+            {/* Search and Filters Toolbar */}
+            <div className="ngo-filter-toolbar">
+              <div className="search-input-wrap">
+                <span className="search-icon">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Search dish, kitchen, or Hyderabad area (e.g. Biryani, Charminar)..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                  aria-label="Search donations"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="search-clear-btn"
+                    onClick={() => setSearchQuery("")}
+                    aria-label="Clear search"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
-              <span className="feed-pulse-indicator">
-                <span className="pulse-dot" /> Live Feed
-              </span>
+
+              {/* Grid / Map View Toggle */}
+              <div className="view-toggle-wrap">
+                <button
+                  type="button"
+                  className={`toggle-view-btn ${viewMode === "grid" ? "active" : ""}`}
+                  onClick={() => setViewMode("grid")}
+                  title="Grid View"
+                  aria-pressed={viewMode === "grid"}
+                >
+                  <span>▦ Grid</span>
+                </button>
+                <button
+                  type="button"
+                  className={`toggle-view-btn ${viewMode === "map" ? "active" : ""}`}
+                  onClick={() => setViewMode("map")}
+                  title="Map View"
+                  aria-pressed={viewMode === "map"}
+                >
+                  <span>🗺️ Map</span>
+                </button>
+              </div>
             </div>
 
-            {availableDonations.length === 0 ? (
-              <div className="empty-state">
-                <span className="empty-icon">🥗</span>
-                <h3>No available donations right now</h3>
-                <p>All active listings have been claimed. Check back shortly or switch to Donor to post a new batch!</p>
+            {/* Filter Chips (Requirement A6: Clean wrapping & orange active states) */}
+            <div className="chips-container-row">
+              <div className="chip-group-wrapper">
+                <span className="chip-group-label">Category:</span>
+                <div className="chips-flex-wrap">
+                  {CATEGORY_CHIPS.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      className={`filter-chip ${selectedCategory === cat ? "active" : ""}`}
+                      onClick={() => setSelectedCategory(cat)}
+                      aria-pressed={selectedCategory === cat}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="chip-group-wrapper">
+                <span className="chip-group-label">Area:</span>
+                <div className="chips-flex-wrap">
+                  {AREA_CHIPS.map((area) => (
+                    <button
+                      key={area}
+                      type="button"
+                      className={`filter-chip ${selectedArea === area ? "active" : ""}`}
+                      onClick={() => setSelectedArea(area)}
+                      aria-pressed={selectedArea === area}
+                    >
+                      {area}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* View Mode: Map or Grid */}
+            {viewMode === "map" ? (
+              <div className="map-view-wrapper mt-4">
+                <div className="map-header-notice">
+                  <span>📍 Showing {filteredAvailable.length} available surplus batches on Hyderabad Map</span>
+                </div>
+                <DonationMap
+                  donations={filteredAvailable}
+                  isVerified={isVerified}
+                  onClaimClick={handleOpenClaimModal}
+                />
               </div>
             ) : (
-              <div className="donations-grid">
-                {availableDonations.map((item) => (
-                  <div key={item.id} className="ngo-donation-card">
-                    <div className="card-top">
-                      <span className="item-category-tag">{item.category}</span>
-                      <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
-                        ● Available
-                      </span>
+              /* Section B: Responsive 3-col Grid of Donation Cards with proper Hierarchy & Images */
+              <div className="donations-grid mt-4">
+                <AnimatePresence>
+                  {filteredAvailable.length === 0 ? (
+                    <div className="empty-state w-full" style={{ gridColumn: "1 / -1" }}>
+                      <span className="empty-icon">🔍</span>
+                      <h3>No available donations match filters</h3>
+                      <p>Try clearing your search query or selecting "All Categories" and "All Areas".</p>
                     </div>
-
-                    <h3 className="card-food-name">{item.foodName}</h3>
-
-                    <div className="card-donor-pill">
-                      <span className="donor-icon">🏢</span>
-                      <span>{item.donorName}</span>
-                    </div>
-
-                    <div className="card-quantity-badge">
-                      <span className="qty-val">{item.quantity}</span>
-                      <span className="qty-unit">{item.unit} available</span>
-                    </div>
-
-                    {item.description && (
-                      <p className="card-description">{item.description}</p>
-                    )}
-
-                    <div className="card-meta-list">
-                      <div className="meta-row">
-                        <span className="meta-icon">📍</span>
-                        <span className="meta-val">{item.pickupAddress}</span>
-                      </div>
-                      <div className="meta-row">
-                        <span className="meta-icon">⏰</span>
-                        <span className="meta-val">Expires: {item.expiryTime}</span>
-                      </div>
-                    </div>
-
-                    <div className="card-action-footer">
-                      {isVerified ? (
-                        <button
-                          type="button"
-                          onClick={() => handleClaim(item)}
-                          className="btn-claim"
-                        >
-                          Claim Donation →
-                        </button>
-                      ) : (
-                        <div className="claim-disabled-wrap">
-                          <button
-                            type="button"
-                            disabled
-                            className="btn-claim-disabled"
-                            title="Only verified NGOs can claim food"
-                          >
-                            Claim (Verification Required)
-                          </button>
-                          <span className="disabled-hint">Pending Admin Approval</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  ) : (
+                    filteredAvailable.map((item) => (
+                      <DonationCard
+                        key={item.id}
+                        item={item}
+                        isVerified={isVerified}
+                        onClaim={handleOpenClaimModal}
+                      />
+                    ))
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </section>
         )}
 
-        {/* My Claims View */}
+        {/* MY CLAIMS TAB */}
         {activeTab === "my-claims" && (
           <section className="ngo-section">
             <div className="section-header-row">
               <div>
-                <h2>My Claims & Logistics</h2>
-                <p>Manage pickup dispatch and verify delivery for your organization's claimed donations.</p>
+                <h2>My Claims & Dispatches</h2>
+                <p>Track pickup logistics and verify distribution to community shelters.</p>
               </div>
               <span className="claims-count-badge">{myClaims.length} Total Claims</span>
             </div>
@@ -243,89 +316,189 @@ export default function NgoDashboard() {
             {myClaims.length === 0 ? (
               <div className="empty-state">
                 <span className="empty-icon">🚚</span>
-                <h3>No claims yet</h3>
-                <p>You haven't claimed any donations yet. Visit the Available tab to claim surplus meals for your shelter.</p>
+                <h3>No active claims yet</h3>
+                <p>Browse available food batches and click "Claim Batch" to organize a pickup.</p>
                 <button
                   type="button"
                   onClick={() => setActiveTab("available")}
-                  className="btn-primary-orange mt-4"
+                  className="btn-primary mt-4"
                 >
                   Browse Available Food →
                 </button>
               </div>
             ) : (
               <div className="my-claims-list">
-                {myClaims.map((item) => (
-                  <div key={item.id} className="claim-card">
-                    <div className="claim-card-main">
-                      <div className="claim-card-header">
-                        <div className="claim-badges">
-                          <span className="item-category-tag">{item.category}</span>
-                          <span className={`status-badge ${getStatusBadgeClass(item.status)}`}>
-                            {item.status === "claimed" && "● Claimed (Awaiting Pickup)"}
-                            {item.status === "picked_up" && "● Picked Up (In Transit)"}
-                            {item.status === "delivered" && "✓ Delivered"}
-                          </span>
+                <AnimatePresence>
+                  {myClaims.map((item) => {
+                    const imgSrc = item.imageUrl || getFoodImage(item.foodName, item.category);
+
+                    return (
+                      <motion.div
+                        key={item.id}
+                        layout
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.96 }}
+                        className="claim-card"
+                      >
+                        {/* Food Image Thumbnail */}
+                        <div className="claim-thumb-container">
+                          <img
+                            src={imgSrc}
+                            alt={item.foodName}
+                            loading="lazy"
+                            className="claim-thumb-img"
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = "/images/biryani.jpg";
+                            }}
+                          />
                         </div>
-                        <h3 className="claim-title">{item.foodName}</h3>
-                        <p className="claim-donor-text">
-                          Provided by <strong>{item.donorName}</strong> •{" "}
-                          <strong>{item.quantity}</strong> {item.unit}
-                        </p>
-                      </div>
 
-                      {item.description && (
-                        <p className="claim-description">{item.description}</p>
-                      )}
+                        <div className="claim-card-main">
+                          <div className="claim-card-header">
+                            <div className="claim-badges">
+                              <span className="item-category-tag">{item.category}</span>
+                              <span className="area-pill-tag">📍 {item.area}</span>
+                            </div>
+                            <h3 className="claim-title">{item.foodName}</h3>
+                            <p className="claim-donor-text">
+                              From <strong>{item.donorName}</strong> •{" "}
+                              <strong className="text-orange">{item.quantity}</strong> {item.unit}
+                            </p>
+                          </div>
 
-                      <div className="claim-details-grid">
-                        <div className="claim-detail-box">
-                          <span className="detail-box-label">Pickup Address</span>
-                          <span className="detail-box-val">📍 {item.pickupAddress}</span>
+                          {item.description && (
+                            <p className="claim-description">{item.description}</p>
+                          )}
+
+                          <div className="claim-details-grid">
+                            <div className="claim-detail-box">
+                              <span className="detail-box-label">Pickup Address</span>
+                              <span className="detail-box-val">📍 {item.pickupAddress}</span>
+                            </div>
+                            <div className="claim-detail-box">
+                              <span className="detail-box-label">Time Status</span>
+                              <CountdownBadge
+                                targetTimestamp={item.expiryTimestamp}
+                                fallbackText={item.expiryTime}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Status progression bar */}
+                          <div className="mt-3">
+                            <StatusTimeline status={item.status} />
+                          </div>
                         </div>
-                        <div className="claim-detail-box">
-                          <span className="detail-box-label">Pickup Deadline</span>
-                          <span className="detail-box-val">⏰ {item.expiryTime}</span>
+
+                        <div className="claim-actions-col">
+                          <span className="actions-header">Dispatch Actions</span>
+                          {item.status === "claimed" && (
+                            <button
+                              type="button"
+                              onClick={() => handleStatusUpdate(item.id, "picked_up", item.foodName)}
+                              className="btn-pickup"
+                            >
+                              📦 Mark Picked Up
+                            </button>
+                          )}
+
+                          {item.status === "picked_up" && (
+                            <button
+                              type="button"
+                              onClick={() => handleStatusUpdate(item.id, "delivered", item.foodName)}
+                              className="btn-deliver"
+                            >
+                              ✅ Mark Delivered
+                            </button>
+                          )}
+
+                          {item.status === "delivered" && (
+                            <div className="delivered-complete-badge">
+                              <span className="check-icon">✓</span>
+                              <span>Distributed to Shelter</span>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="claim-actions-col">
-                      <span className="actions-header">Status Actions</span>
-                      {item.status === "claimed" && (
-                        <button
-                          type="button"
-                          onClick={() => handleStatusUpdate(item.id, "picked_up", item.foodName)}
-                          className="btn-status-action btn-pickup"
-                        >
-                          📦 Mark Picked Up
-                        </button>
-                      )}
-
-                      {item.status === "picked_up" && (
-                        <button
-                          type="button"
-                          onClick={() => handleStatusUpdate(item.id, "delivered", item.foodName)}
-                          className="btn-status-action btn-deliver"
-                        >
-                          ✅ Mark Delivered
-                        </button>
-                      )}
-
-                      {item.status === "delivered" && (
-                        <div className="delivered-complete-badge">
-                          <span className="check-icon">✓</span>
-                          <span>Delivery Complete</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             )}
           </section>
         )}
       </main>
+
+      {/* Claim Confirmation Modal */}
+      <AnimatePresence>
+        {claimModalItem && (
+          <div className="modal-backdrop" onClick={() => setClaimModalItem(null)}>
+            <motion.div
+              className="modal-dialog-card"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="modal-header">
+                <h3>Confirm Food Rescue Claim</h3>
+                <button
+                  type="button"
+                  className="modal-close-btn"
+                  onClick={() => setClaimModalItem(null)}
+                  aria-label="Close modal"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="modal-body">
+                <p className="modal-desc">
+                  Are you ready to dispatch volunteers or transport for this surplus batch?
+                </p>
+
+                <div className="modal-item-summary">
+                  <div className="modal-item-title">{claimModalItem.foodName}</div>
+                  <div className="modal-item-meta">
+                    <span>🏢 {claimModalItem.donorName}</span>
+                    <span>📍 {claimModalItem.area}</span>
+                  </div>
+                  <div className="modal-item-qty">
+                    <strong>{claimModalItem.quantity}</strong> {claimModalItem.unit}
+                  </div>
+                  <div className="modal-item-address">
+                    Address: {claimModalItem.pickupAddress}
+                  </div>
+                </div>
+
+                <p className="modal-note">
+                  Once claimed, the donor kitchen will be notified to hold this batch for {currentUser.name}.
+                </p>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setClaimModalItem(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleConfirmClaim}
+                >
+                  Confirm Claim & Dispatch →
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

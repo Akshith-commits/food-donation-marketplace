@@ -14,7 +14,7 @@ function Beat({ progress, range, last = false, children }) {
   );
 }
 
-export default function ScrollHero() {
+export default function ScrollHero({ onEnter }) {
   const sectionRef = useRef(null);
   const canvasRef = useRef(null);
   const imagesRef = useRef([]);
@@ -85,6 +85,9 @@ export default function ScrollHero() {
       currentRef.current = i;
       requestAnimationFrame(() => draw(i));
     }
+    if (p >= 0.99 && onEnter) {
+      onEnter();
+    }
   });
 
   return (
@@ -108,8 +111,16 @@ export default function ScrollHero() {
               <h2>NGOs nearby claim it.</h2>
             </Beat>
             <Beat progress={scrollYProgress} range={[0.88, 0.93, 0.98, 1]} last>
-              <h2>Join FoodBridge</h2>
-              <button className="cta">Donate food</button>
+              <h2>Enter FoodBridge</h2>
+              <button
+                type="button"
+                className="cta"
+                onClick={() => {
+                  if (onEnter) onEnter();
+                }}
+              >
+                Enter FoodBridge →
+              </button>
             </Beat>
           </>
         )}
